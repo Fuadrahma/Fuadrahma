@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi Forex Chart - MT5 Indicator | مؤشر 10 أزواج فوركس</title>
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Multi Forex Chart - MT5 Indicator">
+    <meta property="og:description" content="مؤشر MetaTrader 5 يعرض 10 أزواج فوركس على شارت واحد باستخدام نسبة التغير المئوية - مجاني ومفتوح المصدر">
+    <meta property="og:url" content="https://fuadrahma.github.io/Fuadrahma/">
+    <meta property="og:image" content="https://fuadrahma.github.io/Fuadrahma/preview.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Multi Forex Chart - MT5 Indicator">
+    <meta name="twitter:description" content="مؤشر MT5 يعرض 10 أزواج فوركس على شارت واحد - مجاني ومفتوح المصدر">
+    <meta name="twitter:image" content="https://fuadrahma.github.io/Fuadrahma/preview.png">
+
+    <meta name="description" content="مؤشر MetaTrader 5 مجاني يعرض 10 أزواج فوركس على شارت واحد باستخدام نسبة التغير المئوية للمقارنة العادلة">
+    <meta name="keywords" content="forex, MT5, MetaTrader 5, indicator, مؤشر فوركس, تداول, أزواج العملات, MQL5">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-card: #1c2333;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79c0ff;
+            --green: #3fb950;
+            --border: #30363d;
+            --gradient-start: #0d1117;
+            --gradient-end: #161b22;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            min-height: 100vh;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0d1117 0%, #1a1f36 50%, #0d1117 100%);
+            padding: 80px 20px 60px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                radial-gradient(circle at 20% 50%, rgba(88,166,255,0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(63,185,80,0.08) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .hero-content { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; }
+
+        .hero-badge {
+            display: inline-block;
+            background: rgba(88,166,255,0.1);
+            border: 1px solid rgba(88,166,255,0.3);
+            color: var(--accent);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #58a6ff, #3fb950);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 32px;
+        }
+
+        .btn-group { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #238636, #2ea043);
+            color: white;
+            box-shadow: 0 4px 14px rgba(35,134,54,0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(35,134,54,0.4);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-share {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            font-size: 0.9rem;
+        }
+
+        .btn-share:hover { border-color: var(--accent); color: var(--accent); }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding: 40px 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .section {
+            padding: 60px 20px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+        }
+
+        .pairs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .pair-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: border-color 0.2s;
+        }
+
+        .pair-card:hover { border-color: var(--accent); }
+
+        .pair-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .pair-name { font-weight: 600; font-size: 1.05rem; }
+        .pair-color { color: var(--text-secondary); font-size: 0.85rem; }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            transition: border-color 0.2s;
+        }
+
+        .feature-card:hover { border-color: var(--accent); }
+
+        .feature-icon {
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+        }
+
+        .feature-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .install-section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 700px;
+            margin: 0 auto;
+            border: 1px solid var(--border);
+        }
+
+        .install-step {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: flex-start;
+        }
+
+        .install-step:last-child { margin-bottom: 0; }
+
+        .step-number {
+            background: var(--accent);
+            color: var(--bg-primary);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 { margin-bottom: 4px; }
+        .step-content p { color: var(--text-secondary); font-size: 0.9rem; }
+
+        code {
+            background: rgba(88,166,255,0.1);
+            color: var(--accent);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            direction: ltr;
+            display: inline-block;
+        }
+
+        .share-section {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, rgba(88,166,255,0.05), rgba(63,185,80,0.05));
+            border-top: 1px solid var(--border);
+        }
+
+        .share-section h2 { margin-bottom: 12px; }
+        .share-section p { color: var(--text-secondary); margin-bottom: 24px; }
+
+        .share-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+        .copy-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            max-width: 500px;
+            margin: 20px auto 0;
+            overflow: hidden;
+        }
+
+        .copy-box input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            padding: 12px 16px;
+            font-size: 0.9rem;
+            direction: ltr;
+            outline: none;
+        }
+
+        .copy-box button {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .copy-box button:hover { background: var(--accent-hover); }
+
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer a { color: var(--accent); text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 1.8rem; }
+            .hero p { font-size: 1rem; }
+            .btn { padding: 12px 20px; font-size: 0.9rem; }
+            .stats { gap: 20px; }
+            .install-section { padding: 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-content">
+        <span class="hero-badge">MT5 Indicator &bull; مجاني ومفتوح المصدر</span>
+        <h1>📊 Multi Forex Chart</h1>
+        <p>مؤشر MetaTrader 5 يعرض <strong>10 أزواج فوركس</strong> على شارت واحد باستخدام نسبة التغير المئوية للمقارنة العادلة</p>
+        <div class="btn-group">
+            <a href="https://raw.githubusercontent.com/Fuadrahma/Fuadrahma/main/MultiForexChart.mq5" download class="btn btn-primary" id="downloadBtn">
+                ⬇️ تحميل المؤشر (.mq5)
+            </a>
+            <a href="https://github.com/Fuadrahma/Fuadrahma" class="btn btn-secondary" target="_blank">
+                ⭐ GitHub المصدر
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Stats -->
+<div class="stats">
+    <div class="stat">
+        <div class="stat-value">10</div>
+        <div class="stat-label">أزواج فوركس</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">∞</div>
+        <div class="stat-label">إطارات زمنية</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">%</div>
+        <div class="stat-label">تغير مئوي</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">0$</div>
+        <div class="stat-label">مجاني بالكامل</div>
+    </div>
+</div>
+
+<!-- Pairs -->
+<section class="section">
+    <h2 class="section-title">الأزواج الافتراضية</h2>
+    <div class="pairs-grid">
+        <div class="pair-card">
+            <div class="pair-dot" style="background:#1e90ff"></div>
+            <div><div class="pair-name">EURUSD</div><div class="pair-color">أزرق</div></div>
+        </div>
+        <div class="pair-card">
+            <div class="pair-dot" style="background:#ff0000"></div>
+            <div><div class="pair-name">GBPUSD</div><div class="pair-color">أحمر</div></div>
+        </div>
+        <div class="pair-card">
+            <div class="pair-dot" style="background:#00ff00"></div>
+            <div><div class="pair-name">USDJPY</div><div class="pair-color">أخضر</div></div>
+        </div>
+        <div class="pair-card">
+            <div class="pair-dot" style="background:#ffd700"></div>
+            <div><div class="pair-name">USDCHF</div><div class="pair-color">ذهبي</div></div>
+        </div>
+        <div class="pair-card">
+            <div class="pair-dot" style="background:#ff00ff"></div>
+            <div><div class="pair-name">AUDUSD</div><div class="pair-color">أرجواني</div></div>
+        </div>
+        <div class="pair-card">
+            <div class="pair-dot" style="background:#ffa500"></div>
+            <div><div class="pair-name">NZDUSD</div><div class="pair-color">برتقالي</div></div>
+        </div>
+        <div class="pair-card">
+            <div class="pair-dot" style="background:#00ffff"></div>
+            <div><div class="pair-name">USDCAD</div><div class="pair-color">سماوي</div></div>
+        </div>
+        <div class="pair-card">
+            <div class="pair-dot" style="background:#ffffff"></div>
+            <div><div class="pair-name">EURJPY</div><div class="pair-color">أبيض</div></div>
+        </div>
+        <div class="pair-card">
+            <div class="pair-dot" style="background:#ffff00"></div>
+            <div><div class="pair-name">GBPJPY</div><div class="pair-color">أصفر</div></div>
+        </div>
+        <div class="pair-card">
+            <div class="pair-dot" style="background:#ee82ee"></div>
+            <div><div class="pair-name">EURGBP</div><div class="pair-color">بنفسجي</div></div>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="section" style="background: var(--bg-secondary);">
+    <h2 class="section-title">المميزات</h2>
+    <div class="features">
+        <div class="feature-card">
+            <div class="feature-icon">📈</div>
+            <h3>مقارنة عادلة</h3>
+            <p>يستخدم نسبة التغير المئوية (% Change) لمقارنة الأزواج بشكل عادل بغض النظر عن سعر كل زوج</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎨</div>
+            <h3>ألوان مميزة</h3>
+            <p>كل زوج بلون مختلف مع إمكانية تخصيص الألوان والسُمك من إعدادات المؤشر</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚙️</div>
+            <h3>قابل للتخصيص</h3>
+            <p>يمكنك تغيير أي زوج من الأزواج العشرة وتعديل فترة الحساب الأساسية</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⏱️</div>
+            <h3>كل الإطارات الزمنية</h3>
+            <p>يعمل على جميع الإطارات الزمنية من M1 إلى MN1 بدون أي تعديل</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔄</div>
+            <h3>تحديث لحظي</h3>
+            <p>يتحدث تلقائياً مع كل تك جديد لعرض أحدث البيانات</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">💡</div>
+            <h3>سهل الاستخدام</h3>
+            <p>فقط اسحب وأفلت على أي شارت - لا يحتاج إعدادات معقدة</p>
+        </div>
+    </div>
+</section>
+
+<!-- Installation -->
+<section class="section">
+    <h2 class="section-title">طريقة التثبيت</h2>
+    <div class="install-section">
+        <div class="install-step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h4>حمّل الملف</h4>
+                <p>اضغط على زر التحميل أعلاه لتنزيل <code>MultiForexChart.mq5</code></p>
+            </div>
+        </div>
+        <div class="install-step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h4>انسخ إلى مجلد المؤشرات</h4>
+                <p>في MT5: <code>File → Open Data Folder → MQL5 → Indicators</code> والصق الملف هناك</p>
+            </div>
+        </div>
+        <div class="install-step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h4>اعمل Compile</h4>
+                <p>افتح الملف في <strong>MetaEditor</strong> واضغط <code>F7</code> أو زر Compile</p>
+            </div>
+        </div>
+        <div class="install-step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+                <h4>أضفه على الشارت</h4>
+                <p>من <strong>Navigator</strong> → <strong>Indicators</strong> → اسحب <strong>MultiForexChart</strong> على أي شارت</p>
+            </div>
+        </div>
+        <div class="install-step">
+            <div class="step-number">5</div>
+            <div class="step-content">
+                <h4>تأكد من Market Watch</h4>
+                <p>تأكد أن جميع الأزواج العشرة موجودة ومفعّلة في نافذة <strong>Market Watch</strong></p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Share -->
+<section class="share-section">
+    <h2>شارك المؤشر</h2>
+    <p>أعجبك المؤشر؟ شاركه مع أصدقائك المتداولين!</p>
+    <div class="share-buttons">
+        <a href="https://twitter.com/intent/tweet?text=%D9%85%D8%A4%D8%B4%D8%B1%20MT5%20%D9%85%D8%AC%D8%A7%D9%86%D9%8A%20%D9%8A%D8%B9%D8%B1%D8%B6%2010%20%D8%A3%D8%B2%D9%88%D8%A7%D8%AC%20%D9%81%D9%88%D8%B1%D9%83%D8%B3%20%D8%B9%D9%84%D9%89%20%D8%B4%D8%A7%D8%B1%D8%AA%20%D9%88%D8%A7%D8%AD%D8%AF%20%F0%9F%93%8A&url=https://fuadrahma.github.io/Fuadrahma/" target="_blank" class="btn btn-share">
+            𝕏 تويتر
+        </a>
+        <a href="https://t.me/share/url?url=https://fuadrahma.github.io/Fuadrahma/&text=%D9%85%D8%A4%D8%B4%D8%B1%20MT5%20%D9%85%D8%AC%D8%A7%D9%86%D9%8A%20%D9%8A%D8%B9%D8%B1%D8%B6%2010%20%D8%A3%D8%B2%D9%88%D8%A7%D8%AC%20%D9%81%D9%88%D8%B1%D9%83%D8%B3%20%D8%B9%D9%84%D9%89%20%D8%B4%D8%A7%D8%B1%D8%AA%20%D9%88%D8%A7%D8%AD%D8%AF" target="_blank" class="btn btn-share">
+            ✈️ تيليجرام
+        </a>
+        <a href="https://wa.me/?text=%D9%85%D8%A4%D8%B4%D8%B1%20MT5%20%D9%85%D8%AC%D8%A7%D9%86%D9%8A%20%D9%8A%D8%B9%D8%B1%D8%B6%2010%20%D8%A3%D8%B2%D9%88%D8%A7%D8%AC%20%D9%81%D9%88%D8%B1%D9%83%D8%B3%20%D8%B9%D9%84%D9%89%20%D8%B4%D8%A7%D8%B1%D8%AA%20%D9%88%D8%A7%D8%AD%D8%AF%20%F0%9F%93%8A%20https://fuadrahma.github.io/Fuadrahma/" target="_blank" class="btn btn-share">
+            💬 واتساب
+        </a>
+        <a href="https://www.facebook.com/sharer/sharer.php?u=https://fuadrahma.github.io/Fuadrahma/" target="_blank" class="btn btn-share">
+            📘 فيسبوك
+        </a>
+    </div>
+    <div class="copy-box">
+        <input type="text" id="shareUrl" value="https://fuadrahma.github.io/Fuadrahma/" readonly>
+        <button onclick="copyLink()">نسخ الرابط</button>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+    <p>
+        صنع بواسطة <a href="https://github.com/Fuadrahma" target="_blank">Fuadrahma</a>
+        &bull; مفتوح المصدر على <a href="https://github.com/Fuadrahma/Fuadrahma" target="_blank">GitHub</a>
+        &bull; رخصة مجانية
+    </p>
+</footer>
+
+<script>
+function copyLink() {
+    const input = document.getElementById('shareUrl');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        const btn = input.nextElementSibling;
+        const original = btn.textContent;
+        btn.textContent = 'تم النسخ ✅';
+        setTimeout(() => btn.textContent = original, 2000);
+    });
+}
+</script>
+
+</body>
+</html>
