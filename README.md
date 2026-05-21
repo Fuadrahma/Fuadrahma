@@ -1,16 +1,61 @@
 ## Hi there 👋
 
+---
+
+## 📊 Multi Forex Chart Indicator (MT5)
+
+مؤشر مخصص لمنصة **MetaTrader 5** يعرض **10 أزواج فوركس** على شارت واحد باستخدام نسبة التغير المئوية (% Change).
+
+### الأزواج الافتراضية
+
+| # | الزوج | اللون |
+|---|-------|-------|
+| 1 | EURUSD | 🔵 أزرق |
+| 2 | GBPUSD | 🔴 أحمر |
+| 3 | USDJPY | 🟢 أخضر |
+| 4 | USDCHF | 🟡 ذهبي |
+| 5 | AUDUSD | 🟣 أرجواني |
+| 6 | NZDUSD | 🟠 برتقالي |
+| 7 | USDCAD | 🔵 سماوي |
+| 8 | EURJPY | ⚪ أبيض |
+| 9 | GBPJPY | 🟡 أصفر |
+| 10 | EURGBP | 🟣 بنفسجي |
+
+### طريقة التثبيت
+
+1. انسخ ملف `MultiForexChart.mq5` إلى مجلد:
+   ```
+   MT5 Data Folder\MQL5\Indicators\
+   ```
+2. افتح **MetaEditor** أو أعد تشغيل MT5
+3. اعمل **Compile** للملف
+4. اسحب المؤشر من **Navigator** على أي شارت
+
+### طريقة الوصول لمجلد البيانات
+
+في MT5: `File` → `Open Data Folder` → `MQL5` → `Indicators`
+
+### المدخلات (Inputs)
+
+- **Pair1 - Pair10**: يمكنك تغيير أي زوج من الأزواج العشرة
+- **BaseBars**: عدد الشموع من النهاية لحساب السعر الأساسي (0 = أول شمعة)
+
+### كيف يعمل المؤشر
+
+- يفتح نافذة منفصلة أسفل الشارت الرئيسي
+- يحسب نسبة التغير المئوية لكل زوج من نقطة بداية محددة
+- يعرض جميع الأزواج العشرة كخطوط ملونة مختلفة
+- خط الصفر يمثل نقطة البداية — فوق الصفر = ارتفاع، تحت الصفر = انخفاض
+- يتحدث تلقائياً مع كل تك جديد
+
+### ملاحظات مهمة
+
+- تأكد أن جميع الأزواج موجودة في **Market Watch** (نافذة مراقبة السوق)
+- المؤشر يعمل على أي إطار زمني (Timeframe)
+- يمكنك تخصيص الألوان والسُمك من خصائص المؤشر
+
+---
+
 <!--
 **Fuadrahma/Fuadrahma** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-
-Here are some ideas to get you started:
-
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
 -->
