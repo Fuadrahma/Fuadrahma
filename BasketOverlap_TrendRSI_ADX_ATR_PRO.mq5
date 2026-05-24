@@ -3,7 +3,7 @@
 //|        Trend-filtered safe basket EA with RSI/ADX/ATR logic      |
 //+------------------------------------------------------------------+
 #property strict
-#property version   "6.00"
+#property version   "6.10"
 
 #include <Trade/Trade.mqh>
 
@@ -15,7 +15,7 @@ CTrade trade;
 input group "--- RISK SETTINGS ---"
 input double InpLotSize                = 0.01;     // Fixed lot size
 input int    InpMaxPositions           = 3;        // Maximum positions per symbol/magic
-input double InpBasketTargetProfit     = 1.50;     // Basket close target in account currency
+input double InpBasketTargetProfit     = 1.50;     // Basket close/trailing activation target
 input double InpMaxBasketFloatingLoss  = 6.00;     // Emergency floating loss close in account currency
 input double InpMaxDailyLoss           = 5.00;     // Stop trading for the day after this closed loss
 input ulong  InpMagicNumber            = 777111;   // EA magic number
@@ -39,6 +39,14 @@ input bool   InpUseATRTakeProfit       = false;    // Use ATR take profit
 input double InpATRTakeMultiplier      = 2.0;      // TP = ATR * multiplier
 input int    InpDeviationPoints        = 20;       // Allowed slippage/deviation
 
+input group "--- TRAILING SETTINGS ---"
+input bool   InpUsePositionTrailingStop = true;    // Trail each position stop loss
+input double InpTrailingStartATR        = 1.0;     // Start trailing after profit >= ATR * multiplier
+input double InpTrailingStopATR         = 1.0;     // Trailing distance = ATR * multiplier
+input double InpTrailingStepPoints      = 20;      // Minimum SL improvement in points
+input bool   InpUseBasketProfitTrailing = true;    // Trail basket profit after target is reached
+input double InpBasketProfitTrailAmount = 0.50;    // Close basket after this pullback from peak profit
+
 input group "--- TRADE SETTINGS ---"
 input bool   InpOneTradePerBar         = true;     // One successful entry per candle
 input bool   InpOneBasketDirection     = true;     // Do not mix buy and sell baskets
@@ -59,6 +67,8 @@ double adxBuffer[];
 double atrBuffer[];
 
 datetime lastTradeBarTime = 0;
+bool     basketTrailActive = false;
+double   basketPeakProfit = 0;
 
 //+------------------------------------------------------------------+
 //| Expert initialization                                            |
@@ -136,6 +146,8 @@ void OnTick()
    if(!RefreshIndicators())
       return;
 
+   ApplyTrailingStops();
+
    const double basketProfit = CalculateBasketProfit();
    if(ManageBasketRisk(basketProfit))
       return;
@@ -145,6 +157,7 @@ void OnTick()
       "TREND RSI ADX ATR EA\n",
       "Positions: ", currentPositions, " / ", InpMaxPositions, "\n",
       "Basket P/L: ", DoubleToString(basketProfit, 2), "\n",
+      "Basket Trail Peak: ", basketTrailActive ? DoubleToString(basketPeakProfit, 2) : "inactive", "\n",
       "Daily P/L: ", DoubleToString(dailyPL, 2), "\n",
       "Spread: ", DoubleToString(spread, 1), " pts\n",
       "ADX: ", DoubleToString(adxBuffer[1], 1)
@@ -181,6 +194,9 @@ bool ValidateInputs()
 {
    if(InpLotSize <= 0 ||
       InpMaxPositions <= 0 ||
+      InpBasketTargetProfit <= 0 ||
+      InpMaxBasketFloatingLoss <= 0 ||
+      InpMaxDailyLoss <= 0 ||
       InpFastEMA_Period <= 1 ||
       InpSlowEMA_Period <= InpFastEMA_Period ||
       InpRSI_Period <= 1 ||
@@ -188,7 +204,11 @@ bool ValidateInputs()
       InpATR_Period <= 1 ||
       InpATRStopMultiplier <= 0 ||
       InpATRTakeMultiplier <= 0 ||
-      InpMaxPullbackATR <= 0)
+      InpMaxPullbackATR <= 0 ||
+      InpTrailingStartATR <= 0 ||
+      InpTrailingStopATR <= 0 ||
+      InpTrailingStepPoints < 0 ||
+      InpBasketProfitTrailAmount <= 0)
    {
       Print("Invalid input settings.");
       return false;
@@ -318,14 +338,110 @@ void BuildStops(const ENUM_ORDER_TYPE type, const double entryPrice, double &sl,
 }
 
 //+------------------------------------------------------------------+
+//| Position trailing stop                                           |
+//+------------------------------------------------------------------+
+void ApplyTrailingStops()
+{
+   if(!InpUsePositionTrailingStop)
+      return;
+
+   const double minStopDistance = GetMinimumStopDistance();
+   const double startDistance = atrBuffer[1] * InpTrailingStartATR;
+   const double trailDistance = MathMax(atrBuffer[1] * InpTrailingStopATR, minStopDistance);
+   const double stepDistance = InpTrailingStepPoints * _Point;
+   const double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   const double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+
+   for(int i = PositionsTotal() - 1; i >= 0; i--)
+   {
+      const ulong ticket = PositionGetTicket(i);
+      if(!IsManagedPosition(ticket))
+         continue;
+
+      const ENUM_POSITION_TYPE type = (ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE);
+      const double openPrice = PositionGetDouble(POSITION_PRICE_OPEN);
+      const double currentSL = PositionGetDouble(POSITION_SL);
+      const double currentTP = PositionGetDouble(POSITION_TP);
+      double newSL = 0;
+
+      if(type == POSITION_TYPE_BUY)
+      {
+         if((bid - openPrice) < startDistance)
+            continue;
+
+         newSL = NormalizeDouble(bid - trailDistance, _Digits);
+         if((bid - newSL) < minStopDistance)
+            continue;
+         if(currentSL > 0 && newSL <= (currentSL + stepDistance))
+            continue;
+      }
+      else if(type == POSITION_TYPE_SELL)
+      {
+         if((openPrice - ask) < startDistance)
+            continue;
+
+         newSL = NormalizeDouble(ask + trailDistance, _Digits);
+         if((newSL - ask) < minStopDistance)
+            continue;
+         if(currentSL > 0 && newSL >= (currentSL - stepDistance))
+            continue;
+      }
+      else
+      {
+         continue;
+      }
+
+      if(trade.PositionModify(ticket, newSL, currentTP))
+         Print("Trailing SL updated for ticket ", ticket, " to ", DoubleToString(newSL, _Digits));
+      else
+         Print("Trailing SL update failed for ticket ", ticket, ": ", trade.ResultRetcodeDescription());
+   }
+}
+
+//+------------------------------------------------------------------+
 //| Basket risk management                                           |
 //+------------------------------------------------------------------+
 bool ManageBasketRisk(const double basketProfit)
 {
-   if(basketProfit >= InpBasketTargetProfit)
+   if(CountPositions() == 0)
+   {
+      ResetBasketTrail();
+      return false;
+   }
+
+   if(InpUseBasketProfitTrailing)
+   {
+      if(basketProfit >= InpBasketTargetProfit)
+      {
+         if(!basketTrailActive)
+         {
+            basketTrailActive = true;
+            basketPeakProfit = basketProfit;
+            Print("Basket trailing activated at: ", DoubleToString(basketProfit, 2));
+         }
+         else if(basketProfit > basketPeakProfit)
+         {
+            basketPeakProfit = basketProfit;
+         }
+      }
+
+      if(basketTrailActive &&
+         basketProfit <= (basketPeakProfit - InpBasketProfitTrailAmount))
+      {
+         Print("Basket trailing stop hit. Peak: ",
+               DoubleToString(basketPeakProfit, 2),
+               " Current: ",
+               DoubleToString(basketProfit, 2));
+         CloseAllPositions();
+         ResetBasketTrail();
+         return true;
+      }
+   }
+   else if(basketProfit >= InpBasketTargetProfit)
    {
       Print("Basket target hit: ", DoubleToString(basketProfit, 2));
       CloseAllPositions();
+      ResetBasketTrail();
       return true;
    }
 
@@ -333,10 +449,20 @@ bool ManageBasketRisk(const double basketProfit)
    {
       Print("Basket floating loss limit hit: ", DoubleToString(basketProfit, 2));
       CloseAllPositions();
+      ResetBasketTrail();
       return true;
    }
 
    return false;
+}
+
+//+------------------------------------------------------------------+
+//| Reset basket trailing state                                      |
+//+------------------------------------------------------------------+
+void ResetBasketTrail()
+{
+   basketTrailActive = false;
+   basketPeakProfit = 0;
 }
 
 //+------------------------------------------------------------------+
