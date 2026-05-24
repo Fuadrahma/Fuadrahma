@@ -298,21 +298,22 @@ bool OpenSell()
 void BuildStops(const ENUM_ORDER_TYPE type, const double entryPrice, double &sl, double &tp)
 {
    const double minStopDistance = GetMinimumStopDistance();
-   const double atrDistance = MathMax(atrBuffer[1], minStopDistance);
+   const double slDistance = MathMax(atrBuffer[1] * InpATRStopMultiplier, minStopDistance);
+   const double tpDistance = MathMax(atrBuffer[1] * InpATRTakeMultiplier, minStopDistance);
 
    if(type == ORDER_TYPE_BUY)
    {
       if(InpUseATRStopLoss)
-         sl = NormalizeDouble(entryPrice - (atrDistance * InpATRStopMultiplier), _Digits);
+         sl = NormalizeDouble(entryPrice - slDistance, _Digits);
       if(InpUseATRTakeProfit)
-         tp = NormalizeDouble(entryPrice + (atrDistance * InpATRTakeMultiplier), _Digits);
+         tp = NormalizeDouble(entryPrice + tpDistance, _Digits);
    }
    else
    {
       if(InpUseATRStopLoss)
-         sl = NormalizeDouble(entryPrice + (atrDistance * InpATRStopMultiplier), _Digits);
+         sl = NormalizeDouble(entryPrice + slDistance, _Digits);
       if(InpUseATRTakeProfit)
-         tp = NormalizeDouble(entryPrice - (atrDistance * InpATRTakeMultiplier), _Digits);
+         tp = NormalizeDouble(entryPrice - tpDistance, _Digits);
    }
 }
 
@@ -494,7 +495,7 @@ double NormalizeVolume(const double volume)
    if(step > 0)
       normalized = MathFloor(normalized / step) * step;
 
-   return NormalizeDouble(normalized, 2);
+   return NormalizeDouble(normalized, 8);
 }
 
 //+------------------------------------------------------------------+
