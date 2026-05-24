@@ -1,0 +1,62 @@
+exchange:
+  name: binance
+  sandbox: true
+  rate_limit: true
+
+trading:
+  mode: paper           # paper | live
+  symbol: BTC/USDT
+  timeframe: 1h
+  strategy: ema_crossover
+  base_currency: USDT
+  initial_balance: 10000
+
+strategies:
+  ema_crossover:
+    fast_period: 9
+    slow_period: 21
+
+  rsi:
+    period: 14
+    overbought: 70
+    oversold: 30
+
+  macd:
+    fast_period: 12
+    slow_period: 26
+    signal_period: 9
+
+  bollinger_bands:
+    period: 20
+    std_dev: 2.0
+
+  multi_indicator:
+    rsi_period: 14
+    rsi_overbought: 70
+    rsi_oversold: 30
+    macd_fast: 12
+    macd_slow: 26
+    macd_signal: 9
+    bb_period: 20
+    bb_std: 2.0
+    ema_fast: 9
+    ema_slow: 21
+
+risk:
+  max_position_pct: 0.02    # max 2% of balance per trade
+  stop_loss_pct: 0.03       # 3% stop loss
+  take_profit_pct: 0.06     # 6% take profit (2:1 R:R)
+  max_open_trades: 3
+  trailing_stop: false
+  trailing_stop_pct: 0.02
+  max_daily_loss_pct: 0.05  # stop trading after 5% daily loss
+
+backtest:
+  start_date: "2024-01-01"
+  end_date: "2024-12-31"
+  initial_balance: 10000
+  commission_pct: 0.001
+
+logging:
+  level: INFO
+  file: logs/trading.log
