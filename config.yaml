@@ -1,0 +1,67 @@
+# Trading Bot Configuration
+# All values here can be overridden by environment variables.
+
+symbols:
+  - BTC/USDT
+  - ETH/USDT
+  - BNB/USDT
+  - SOL/USDT
+  - XRP/USDT
+
+timeframe: "1h"
+lookback_candles: 500
+paper_trading: true
+log_level: INFO
+log_file: logs/trading_bot.log
+data_dir: data/market
+results_dir: results
+loop_interval_seconds: 60
+
+# Notification settings (set via env vars: TELEGRAM_TOKEN, TELEGRAM_CHAT_ID)
+notifications_enabled: false
+
+exchange:
+  name: binance
+  testnet: true
+  # api_key and api_secret via env vars: EXCHANGE_API_KEY, EXCHANGE_API_SECRET
+
+risk:
+  max_position_size_pct: 0.05     # max 5% of portfolio per trade
+  max_drawdown_pct: 0.15          # halt if drawdown exceeds 15%
+  stop_loss_pct: 0.02             # 2% stop-loss
+  take_profit_pct: 0.04           # 4% take-profit (2:1 RR)
+  trailing_stop_pct: 0.015        # 1.5% trailing stop
+  max_open_positions: 5
+  risk_per_trade_pct: 0.01        # risk 1% of capital per trade
+  max_daily_loss_pct: 0.05        # stop trading after 5% daily loss
+  use_kelly_criterion: true
+
+strategy:
+  active_strategies:
+    - rsi
+    - macd
+    - bollinger
+    - ema_crossover
+    - vwap
+  ensemble_method: weighted_vote  # weighted_vote | majority | unanimous
+  rsi_period: 14
+  rsi_oversold: 30.0
+  rsi_overbought: 70.0
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  bb_period: 20
+  bb_std: 2.0
+  ema_fast: 9
+  ema_slow: 21
+  vwap_period: 14
+  atr_period: 14
+  adx_period: 14
+  adx_threshold: 25.0
+
+backtest:
+  initial_capital: 10000.0
+  commission_pct: 0.001           # 0.1% per trade
+  slippage_pct: 0.0005            # 0.05% slippage
+  start_date: "2023-01-01"
+  end_date: "2024-12-31"
