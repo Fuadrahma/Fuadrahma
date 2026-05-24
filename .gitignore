@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.env
+*.pkl
+trading_bot/data/*.db
+trading_bot/data/ml_model.pkl
+trading_bot/logs/*.log
+.pytest_cache/
+.DS_Store
