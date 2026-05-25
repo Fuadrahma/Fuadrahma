@@ -1,16 +1,141 @@
-## Hi there 👋
+# 🕯 PinBar Expert Advisor — MT5
+### روبوت تداول ذيول الشموع الاحترافي | MetaTrader 5
 
-<!--
-**Fuadrahma/Fuadrahma** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+---
 
-Here are some ideas to get you started:
+## 📋 نظرة عامة | Overview
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+**PinBar_Expert_1M.mq5** is a professional MetaTrader 5 Expert Advisor that detects and filters **Pin Bar reversal candles** on the **1-Minute (M1) timeframe**. It combines four independent filters to eliminate false signals and ensure entries align with liquidity, trend, and volatility conditions.
+
+---
+
+## ✨ المميزات | Features
+
+| الميزة | الوصف |
+|--------|-------|
+| 🔎 كشف Pin Bar | يرصد شموع الارتداد ذات الذيول الطويلة تلقائياً |
+| 📊 فلتر ATR | يحظر الشموع الميتة بالمقارنة مع التقلب الحالي |
+| 💧 فلتر السيولة | يشترط حجم تداول أعلى من المتوسط بنسبة قابلة للضبط |
+| 📈 فلتر الاتجاه | يستخدم EMA للتداول مع الاتجاه السائد فقط |
+| 💼 إدارة المخاطر | وقف خسارة + هدف ربح بنسبة 1:2 تلقائياً |
+| 🔔 تنبيهات | صوتية + إشعار هاتف + بريد إلكتروني |
+| 📐 لوحة تحكم | لوحة احترافية بالعربية مباشرة على الشارت |
+| ⚙️ مدخلات مرنة | تحكم كامل في جميع الفلاتر من إعدادات المؤشر |
+
+---
+
+## 📑 المدخلات الخارجية | Input Parameters
+
+### هندسة الشمعة
+| المدخل | الافتراضي | الوصف |
+|--------|-----------|-------|
+| `InpMinBarSizeATR` | `1.2` | الحد الأدنى لحجم الشمعة × ATR (14) |
+| `InpMaxBodyRatio` | `0.25` | الحد الأقصى لنسبة جسم الشمعة (25%) |
+| `InpMinTailRatio` | `0.65` | الحد الأدنى لنسبة الذيل الانعكاسي (65%) |
+
+### الفلاتر
+| المدخل | الافتراضي | الوصف |
+|--------|-----------|-------|
+| `InpEMAPeriod` | `50` | فترة EMA للاتجاه |
+| `InpVolumePeriod` | `20` | فترة حساب متوسط حجم التداول |
+| `InpVolumeMulti` | `1.3` | نسبة زيادة الحجم عن المتوسط (130%) |
+
+### إدارة المخاطر
+| المدخل | الافتراضي | الوصف |
+|--------|-----------|-------|
+| `InpLotSize` | `0.01` | حجم الصفقة |
+| `InpRiskReward` | `2.0` | نسبة المخاطرة للعائد (1:2) |
+| `InpSLBuffer` | `2.0` | هامش إضافي لوقف الخسارة (نقاط Pips) |
+| `InpMaxTrades` | `3` | الحد الأقصى للصفقات المفتوحة في وقت واحد |
+| `InpAutoTrade` | `true` | تفعيل التداول الآلي (إيقاف = إشارات فقط) |
+
+---
+
+## 🧮 منطق الاشارات | Signal Logic
+
+### 🟢 اشارة الشراء (Bullish Pin Bar)
+```
+شرط الجسم    : Body ≤ TotalRange × MaxBodyRatio (25%)
+شرط الذيل    : LowerTail ≥ TotalRange × MinTailRatio (65%)
+شرط ATR      : TotalRange ≥ ATR(14) × MinBarSizeATR (1.2×)
+شرط الحجم   : Volume[1] > AvgVolume(20) × 1.3
+شرط الاتجاه  : Close[1] > EMA(50)[1]
+```
+
+### 🔴 اشارة البيع (Bearish Pin Bar)
+```
+شرط الجسم    : Body ≤ TotalRange × MaxBodyRatio (25%)
+شرط الذيل    : UpperTail ≥ TotalRange × MinTailRatio (65%)
+شرط ATR      : TotalRange ≥ ATR(14) × MinBarSizeATR (1.2×)
+شرط الحجم   : Volume[1] > AvgVolume(20) × 1.3
+شرط الاتجاه  : Close[1] < EMA(50)[1]
+```
+
+---
+
+## 💡 إدارة المخاطر | Risk Management
+
+| الصفقة | الدخول | وقف الخسارة | هدف الربح |
+|--------|--------|-------------|-----------|
+| **شراء** | Market مع فتح الشمعة [0] | Low[1] − 2 pips | RR × 1:2 |
+| **بيع** | Market مع فتح الشمعة [0] | High[1] + 2 pips | RR × 1:2 |
+
+---
+
+## 📲 لوحة التحكم | Dashboard
+
+تظهر لوحة تحكم احترافية في أعلى يسار الرسم البياني تعرض:
+
+- ✅ **حالة النظام** (نشط / متوقف)
+- 🔄 **وضع التشغيل** (تداول آلي / إشارات فقط)
+- 📡 **آخر إشارة** (النوع والوقت)
+- 📊 **إحصائيات الإشارات** (إجمالي / شراء / بيع)
+- 💼 **إحصائيات الصفقات** (مفتوحة / إجمالي / ربح/خسارة)
+- ⚙️ **الفلاتر النشطة** (EMA / ATR / Volume)
+- 🕐 **الوقت الحالي**
+
+---
+
+## 🚀 التثبيت | Installation
+
+1. انسخ ملف `PinBar_Expert_1M.mq5` إلى المسار:
+   ```
+   [MetaTrader 5 Data Folder]\MQL5\Experts\
+   ```
+2. افتح **MetaEditor** واضغط **F7** لتجميع الملف (Compile).
+3. في MetaTrader 5، افتح رسم بياني على **فريم M1**.
+4. اسحب الروبوت من مستعرض Navigator إلى الرسم البياني.
+5. اضبط الإعدادات من نافذة الخصائص.
+6. تأكد من تفعيل **"Allow Algo Trading"** في شريط الأدوات.
+
+---
+
+## ⚠️ تنبيهات هامة | Important Notes
+
+> **تحذير قانوني:** هذا الروبوت مخصص للأغراض التعليمية والبحثية. التداول في الأسواق المالية ينطوي على مخاطر عالية وقد تخسر رأس مالك. اختبر دائماً على حساب تجريبي (Demo) قبل التداول الحقيقي.
+
+- **اختبار على Demo أولاً:** لا تستخدم الروبوت على حساب حقيقي دون اختبار كافٍ.
+- **فريم M1 عالي المخاطر:** الإطار الزمني للدقيقة حساس للضوضاء وعمليات السيولة.
+- **السبريد مهم:** الروبوت مصمم لأزواج ذات سبريد منخفض.
+- **VPS موصى به:** للتداول الآلي المستمر يُفضل تشغيل MT5 على VPS.
+
+---
+
+## 🧪 الاختبار الموصى به | Recommended Testing
+
+1. **Strategy Tester:** اختبر على بيانات تاريخية (Tick data) للحصول على نتائج دقيقة.
+2. **Demo Account:** اختبر على حساب تجريبي حي لمدة أسبوع على الأقل.
+3. **Forward Test:** قارن نتائج الاختبار التاريخي مع الأداء الحي.
+
+---
+
+## 📁 هيكل المشروع | Project Structure
+
+```
+PinBar_Expert_1M.mq5      ← الملف الرئيسي للروبوت
+README.md                  ← هذا الملف
+```
+
+---
+
+*تم البناء بمواصفات احترافية لتصفية إشارات Pin Bar على فريم M1 عبر دمج الهندسة الشمعية + السيولة + الاتجاه + التقلب.*
