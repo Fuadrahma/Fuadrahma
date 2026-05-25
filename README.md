@@ -15,9 +15,10 @@ Expert Advisor for MetaTrader 5 that detects and trades Pin Bar reversal pattern
 ## Installation
 
 1. Copy `MQL5/Experts/PinBarEA.mq5` to your MT5 `Experts` folder
-2. Copy `MQL5/Include/PinBarDashboard.mqh` to your MT5 `Include` folder
-3. Compile `PinBarEA.mq5` in MetaEditor
-4. Attach the EA to any M1 chart
+2. Compile in MetaEditor (F7)
+3. Attach the EA to any M1 chart
+
+**One file only - no extra dependencies needed.**
 
 ## Input Parameters
 
@@ -38,13 +39,3 @@ Expert Advisor for MetaTrader 5 that detects and trades Pin Bar reversal pattern
 **Buy Signal**: Small body + long lower tail + price above EMA + high volume + ATR filter pass
 
 **Sell Signal**: Small body + long upper tail + price below EMA + high volume + ATR filter pass
-
-## File Structure
-
-```
-MQL5/
-├── Experts/
-│   └── PinBarEA.mq5          # Main Expert Advisor
-└── Include/
-    └── PinBarDashboard.mqh    # Arabic dashboard panel
-```
