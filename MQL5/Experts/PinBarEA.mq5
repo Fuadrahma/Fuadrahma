@@ -4,7 +4,7 @@
 //| Pin Bar Trading System with Arabic Dashboard                     |
 //+------------------------------------------------------------------+
 #property copyright   "Pin Bar EA"
-#property version     "1.00"
+#property version     "1.10"
 #property description "نظام تداول ذيول الشموع (Pin Bar) مع فلاتر ATR و EMA و Volume"
 #property description "يعمل على فريم الدقيقة (M1) مع لوحة معلومات عربية احترافية"
 
@@ -68,6 +68,7 @@ private:
    int               m_signal_count;
    string            m_ea_status;
    color             m_status_color;
+   datetime          m_last_update;
 
    void              CreatePanel();
    void              CreateRect(string name, int x, int y, int w, int h,
@@ -90,6 +91,7 @@ public:
                      CPinBarDashboard();
                     ~CPinBarDashboard();
    void              Init(int x, int y);
+   bool              NeedsUpdate();
    void              Update(double ema_val, double atr_val, double vol_avg,
                             double current_price, string status, color status_clr);
    void              AddSignal(SignalRecord &signal);
@@ -98,37 +100,38 @@ public:
    void              Show();
    void              Hide();
    void              Destroy();
-   bool              IsVisible() { return m_visible; }
+   bool              IsVisible()  { return m_visible;    }
    bool              OnClick(int x, int y);
   };
 
 //+------------------------------------------------------------------+
 CPinBarDashboard::CPinBarDashboard()
   {
-   m_x = 20;
-   m_y = 30;
-   m_width = 340;
-   m_height = 620;
-   m_visible = true;
-   m_minimized = false;
-   m_total_buy = 0;
-   m_total_sell = 0;
+   m_x             = 20;
+   m_y             = 30;
+   m_width         = 340;
+   m_height        = 620;
+   m_visible       = true;
+   m_minimized     = false;
+   m_total_buy     = 0;
+   m_total_sell    = 0;
    m_total_signals = 0;
-   m_win_rate = 0;
-   m_total_profit = 0;
-   m_signal_count = 0;
-   m_ea_status = "جاهز";
-   m_status_color = DASH_ACCENT_BLUE;
+   m_win_rate      = 0;
+   m_total_profit  = 0;
+   m_signal_count  = 0;
+   m_ea_status     = "جاهز";
+   m_status_color  = DASH_ACCENT_BLUE;
+   m_last_update   = 0;
    for(int i = 0; i < 10; i++)
      {
-      m_last_signals[i].time = 0;
-      m_last_signals[i].type = "";
-      m_last_signals[i].entry = 0;
-      m_last_signals[i].sl = 0;
-      m_last_signals[i].tp = 0;
-      m_last_signals[i].atr = 0;
+      m_last_signals[i].time         = 0;
+      m_last_signals[i].type         = "";
+      m_last_signals[i].entry        = 0;
+      m_last_signals[i].sl           = 0;
+      m_last_signals[i].tp           = 0;
+      m_last_signals[i].atr          = 0;
       m_last_signals[i].volume_ratio = 0;
-      m_last_signals[i].active = false;
+      m_last_signals[i].active       = false;
      }
   }
 
@@ -153,11 +156,22 @@ void CPinBarDashboard::Init(int x, int y)
   }
 
 //+------------------------------------------------------------------+
+bool CPinBarDashboard::NeedsUpdate()
+  {
+   datetime now = TimeCurrent();
+   if(now - m_last_update < 1)
+      return false;
+   m_last_update = now;
+   return true;
+  }
+
+//+------------------------------------------------------------------+
 void CPinBarDashboard::CreateRect(string name, int x, int y, int w, int h,
                                    color bg, color border, int border_width)
   {
    string obj_name = ObjName(name);
-   ObjectCreate(0, obj_name, OBJ_RECTANGLE_LABEL, 0, 0, 0);
+   if(ObjectFind(0, obj_name) < 0)
+      ObjectCreate(0, obj_name, OBJ_RECTANGLE_LABEL, 0, 0, 0);
    ObjectSetInteger(0, obj_name, OBJPROP_XDISTANCE, x);
    ObjectSetInteger(0, obj_name, OBJPROP_YDISTANCE, y);
    ObjectSetInteger(0, obj_name, OBJPROP_XSIZE, w);
@@ -178,7 +192,8 @@ void CPinBarDashboard::CreateLbl(string name, string text, int x, int y,
                                   ENUM_ANCHOR_POINT anchor)
   {
    string obj_name = ObjName(name);
-   ObjectCreate(0, obj_name, OBJ_LABEL, 0, 0, 0);
+   if(ObjectFind(0, obj_name) < 0)
+      ObjectCreate(0, obj_name, OBJ_LABEL, 0, 0, 0);
    ObjectSetInteger(0, obj_name, OBJPROP_XDISTANCE, x);
    ObjectSetInteger(0, obj_name, OBJPROP_YDISTANCE, y);
    ObjectSetString(0, obj_name, OBJPROP_TEXT, text);
@@ -196,7 +211,8 @@ void CPinBarDashboard::CreateLbl(string name, string text, int x, int y,
 void CPinBarDashboard::CreateDivider(string name, int x1, int y1, int x2, int y2, color clr)
   {
    string obj_name = ObjName(name);
-   ObjectCreate(0, obj_name, OBJ_RECTANGLE_LABEL, 0, 0, 0);
+   if(ObjectFind(0, obj_name) < 0)
+      ObjectCreate(0, obj_name, OBJ_RECTANGLE_LABEL, 0, 0, 0);
    ObjectSetInteger(0, obj_name, OBJPROP_XDISTANCE, x1);
    ObjectSetInteger(0, obj_name, OBJPROP_YDISTANCE, y1);
    ObjectSetInteger(0, obj_name, OBJPROP_XSIZE, x2 - x1);
@@ -265,8 +281,8 @@ void CPinBarDashboard::DrawFiltersSection(double ema_val, double atr_val,
    CreateDivider("filters_line", m_x + 15, fy + 18, m_x + m_width - 15, fy + 18,
                  DASH_DIVIDER_COLOR);
 
-   int row_h = 26;
-   int ry = fy + 25;
+   int row_h  = 26;
+   int ry     = fy + 25;
    int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
 
    string labels[4];
@@ -282,14 +298,27 @@ void CPinBarDashboard::DrawFiltersSection(double ema_val, double atr_val,
    values[3] = DoubleToString(vol_avg, 0);
 
    color val_colors[4];
-   val_colors[0] = (current_price > ema_val) ? DASH_ACCENT_GREEN : DASH_ACCENT_RED;
-   val_colors[1] = (current_price > ema_val) ? DASH_ACCENT_GREEN : DASH_ACCENT_RED;
+   if(current_price > ema_val)
+     {
+      val_colors[0] = DASH_ACCENT_GREEN;
+      val_colors[1] = DASH_ACCENT_GREEN;
+     }
+   else
+     {
+      val_colors[0] = DASH_ACCENT_RED;
+      val_colors[1] = DASH_ACCENT_RED;
+     }
    val_colors[2] = DASH_TEXT_PRIMARY;
    val_colors[3] = DASH_TEXT_PRIMARY;
 
    for(int i = 0; i < 4; i++)
      {
-      color bg = (i % 2 == 0) ? DASH_ROW_ALT : DASH_BG_COLOR;
+      color bg;
+      if(i % 2 == 0)
+         bg = DASH_ROW_ALT;
+      else
+         bg = DASH_BG_COLOR;
+
       CreateRect("frow_" + IntegerToString(i), m_x + 10, ry, m_width - 20, row_h,
                  bg, bg, 0);
       CreateLbl("flbl_" + IntegerToString(i), labels[i], m_x + m_width - 20, ry + 5,
@@ -331,9 +360,9 @@ void CPinBarDashboard::DrawStatsSection()
                  DASH_DIVIDER_COLOR);
 
    int box_w = (m_width - 40) / 2;
-   int bx1 = m_x + 10;
-   int bx2 = m_x + 10 + box_w + 10;
-   int by = sy + 26;
+   int bx1   = m_x + 10;
+   int bx2   = m_x + 10 + box_w + 10;
+   int by    = sy + 26;
 
    CreateRect("stat_buy_bg", bx1, by, box_w, 55, DASH_BADGE_BUY_BG, DASH_ACCENT_GREEN, 1);
    CreateLbl("stat_buy_num", IntegerToString(m_total_buy), bx1 + box_w / 2, by + 6,
@@ -352,7 +381,13 @@ void CPinBarDashboard::DrawStatsSection()
               DASH_ROW_ALT, DASH_DIVIDER_COLOR, 1);
    CreateLbl("stat_wr_lbl", "نسبة النجاح", m_x + m_width - 20, ry + 7,
              9, DASH_TEXT_SECONDARY, DASH_FONT_ARABIC, ANCHOR_RIGHT_UPPER);
-   color wr_clr = (m_win_rate >= 50) ? DASH_ACCENT_GREEN : DASH_ACCENT_RED;
+
+   color wr_clr;
+   if(m_win_rate >= 50)
+      wr_clr = DASH_ACCENT_GREEN;
+   else
+      wr_clr = DASH_ACCENT_RED;
+
    CreateLbl("stat_wr_val", DoubleToString(m_win_rate, 1) + "%", m_x + 20, ry + 7,
              10, wr_clr, DASH_FONT_BOLD, ANCHOR_LEFT_UPPER);
 
@@ -361,8 +396,17 @@ void CPinBarDashboard::DrawStatsSection()
               DASH_BG_COLOR, DASH_DIVIDER_COLOR, 1);
    CreateLbl("stat_pnl_lbl", "إجمالي الأرباح", m_x + m_width - 20, ry + 7,
              9, DASH_TEXT_SECONDARY, DASH_FONT_ARABIC, ANCHOR_RIGHT_UPPER);
-   color pnl_clr = (m_total_profit >= 0) ? DASH_ACCENT_GREEN : DASH_ACCENT_RED;
-   string pnl_prefix = (m_total_profit >= 0) ? "+" : "";
+
+   color pnl_clr;
+   if(m_total_profit >= 0)
+      pnl_clr = DASH_ACCENT_GREEN;
+   else
+      pnl_clr = DASH_ACCENT_RED;
+
+   string pnl_prefix = "";
+   if(m_total_profit >= 0)
+      pnl_prefix = "+";
+
    CreateLbl("stat_pnl_val", pnl_prefix + DoubleToString(m_total_profit, 2),
              m_x + 20, ry + 7,
              10, pnl_clr, DASH_FONT_BOLD, ANCHOR_LEFT_UPPER);
@@ -377,9 +421,11 @@ void CPinBarDashboard::DrawSignalHistory()
    CreateDivider("hist_line", m_x + 15, sy + 18, m_x + m_width - 15, sy + 18,
                  DASH_DIVIDER_COLOR);
 
-   int ry = sy + 24;
+   int ry    = sy + 24;
    int row_h = 22;
-   int count = MathMin(m_signal_count, 5);
+   int count = m_signal_count;
+   if(count > 5)
+      count = 5;
 
    if(count == 0)
      {
@@ -393,14 +439,31 @@ void CPinBarDashboard::DrawSignalHistory()
       int idx = m_signal_count - 1 - i;
       if(idx < 0)
          break;
+
       int arr_idx = idx % 10;
-      color bg = (i % 2 == 0) ? DASH_ROW_ALT : DASH_BG_COLOR;
+
+      color bg;
+      if(i % 2 == 0)
+         bg = DASH_ROW_ALT;
+      else
+         bg = DASH_BG_COLOR;
+
       CreateRect("hrow_" + IntegerToString(i), m_x + 10, ry, m_width - 20, row_h,
                  bg, bg, 0);
 
       bool is_buy = (m_last_signals[arr_idx].type == "شراء");
-      color sig_clr = is_buy ? DASH_ACCENT_GREEN : DASH_ACCENT_RED;
-      string sig_icon = is_buy ? "\x25B2" : "\x25BC";
+
+      color sig_clr;
+      if(is_buy)
+         sig_clr = DASH_ACCENT_GREEN;
+      else
+         sig_clr = DASH_ACCENT_RED;
+
+      string sig_icon;
+      if(is_buy)
+         sig_icon = "\x25B2";
+      else
+         sig_icon = "\x25BC";
 
       CreateLbl("hsig_" + IntegerToString(i),
                 sig_icon + " " + m_last_signals[arr_idx].type,
@@ -426,7 +489,7 @@ void CPinBarDashboard::DrawFooter()
   {
    int fy = m_y + m_height - 25;
    CreateDivider("footer_line", m_x + 15, fy, m_x + m_width - 15, fy, DASH_DIVIDER_COLOR);
-   CreateLbl("footer_text", "Pin Bar EA v1.0 | " + _Symbol + " | " +
+   CreateLbl("footer_text", "Pin Bar EA v1.1 | " + _Symbol + " | " +
              TimeToString(TimeCurrent(), TIME_MINUTES),
              m_x + m_width / 2, fy + 5,
              7, DASH_TEXT_MUTED, DASH_FONT, ANCHOR_UPPER);
@@ -438,7 +501,7 @@ void CPinBarDashboard::Update(double ema_val, double atr_val, double vol_avg,
   {
    if(!m_visible)
       return;
-   m_ea_status = status;
+   m_ea_status    = status;
    m_status_color = status_clr;
    DeleteAllObjects();
    CreatePanel();
@@ -465,18 +528,38 @@ void CPinBarDashboard::AddSignal(SignalRecord &signal)
 //+------------------------------------------------------------------+
 void CPinBarDashboard::UpdateStats(int buys, int sells, double win_rate, double profit)
   {
-   m_total_buy = buys;
-   m_total_sell = sells;
+   m_total_buy     = buys;
+   m_total_sell    = sells;
    m_total_signals = buys + sells;
-   m_win_rate = win_rate;
-   m_total_profit = profit;
+   m_win_rate      = win_rate;
+   m_total_profit  = profit;
   }
 
 //+------------------------------------------------------------------+
-void CPinBarDashboard::Toggle()       { m_minimized = !m_minimized; }
-void CPinBarDashboard::Show()         { m_visible = true; }
-void CPinBarDashboard::Hide()         { m_visible = false; DeleteAllObjects(); ChartRedraw(0); }
-void CPinBarDashboard::Destroy()      { DeleteAllObjects(); }
+void CPinBarDashboard::Toggle()
+  {
+   m_minimized = !m_minimized;
+  }
+
+//+------------------------------------------------------------------+
+void CPinBarDashboard::Show()
+  {
+   m_visible = true;
+  }
+
+//+------------------------------------------------------------------+
+void CPinBarDashboard::Hide()
+  {
+   m_visible = false;
+   DeleteAllObjects();
+   ChartRedraw(0);
+  }
+
+//+------------------------------------------------------------------+
+void CPinBarDashboard::Destroy()
+  {
+   DeleteAllObjects();
+  }
 
 //+------------------------------------------------------------------+
 bool CPinBarDashboard::OnClick(int x, int y)
@@ -552,16 +635,34 @@ int               g_total_sell;
 int               g_wins;
 int               g_losses;
 double            g_total_profit;
-datetime          g_last_signal_time;
+
+//+------------------------------------------------------------------+
+//| كشف نوع التعبئة المناسب للبروكر                                  |
+//+------------------------------------------------------------------+
+ENUM_ORDER_TYPE_FILLING DetectFilling()
+  {
+   long filling_mode = SymbolInfoInteger(_Symbol, SYMBOL_FILLING_MODE);
+
+   if((filling_mode & SYMBOL_FILLING_FOK) != 0)
+      return ORDER_FILLING_FOK;
+
+   if((filling_mode & SYMBOL_FILLING_IOC) != 0)
+      return ORDER_FILLING_IOC;
+
+   return ORDER_FILLING_RETURN;
+  }
 
 //+------------------------------------------------------------------+
 //| Expert initialization                                             |
 //+------------------------------------------------------------------+
 int OnInit()
   {
+   if(Period() != PERIOD_M1)
+      Print("تحذير: الإكسبيرت مصمم لفريم الدقيقة (M1). الفريم الحالي مختلف!");
+
    trade.SetExpertMagicNumber(InpMagicNumber);
    trade.SetDeviationInPoints(10);
-   trade.SetTypeFilling(ORDER_FILLING_FOK);
+   trade.SetTypeFilling(DetectFilling());
 
    h_ema = iMA(_Symbol, PERIOD_M1, InpTrendEMA, 0, MODE_EMA, PRICE_CLOSE);
    if(h_ema == INVALID_HANDLE)
@@ -580,19 +681,19 @@ int OnInit()
    ArraySetAsSeries(buf_ema, true);
    ArraySetAsSeries(buf_atr, true);
 
-   g_total_buy = 0;
-   g_total_sell = 0;
-   g_wins = 0;
-   g_losses = 0;
+   g_total_buy    = 0;
+   g_total_sell   = 0;
+   g_wins         = 0;
+   g_losses       = 0;
    g_total_profit = 0.0;
-   g_last_signal_time = 0;
 
    if(InpShowDashboard)
       dashboard.Init(InpDashboardX, InpDashboardY);
 
    Print("══════════════════════════════════════════");
-   Print("  نظام ذيول الشموع - تم التشغيل بنجاح");
+   Print("  نظام ذيول الشموع v1.1 - تم التشغيل بنجاح");
    Print("  الرمز: ", _Symbol, " | الإطار: M1");
+   Print("  نوع التعبئة: ", EnumToString(DetectFilling()));
    Print("══════════════════════════════════════════");
 
    return INIT_SUCCEEDED;
@@ -621,18 +722,20 @@ void OnDeinit(const int reason)
   }
 
 //+------------------------------------------------------------------+
-//| حساب متوسط الحجم يدوياً                                          |
+//| حساب متوسط الحجم                                                  |
 //+------------------------------------------------------------------+
 double CalcVolumeAverage(int period)
   {
-   double volumes[];
-   ArraySetAsSeries(volumes, true);
-   int copied = CopyTickVolume(_Symbol, PERIOD_M1, 0, period + 2, volumes);
+   long vol_data[];
+   ArraySetAsSeries(vol_data, true);
+   int copied = CopyTickVolume(_Symbol, PERIOD_M1, 0, period + 2, vol_data);
    if(copied < period + 2)
       return 0;
+
    double sum = 0;
    for(int i = 1; i <= period; i++)
-      sum += volumes[i];
+      sum += (double)vol_data[i];
+
    return sum / period;
   }
 
@@ -641,11 +744,11 @@ double CalcVolumeAverage(int period)
 //+------------------------------------------------------------------+
 double GetBarVolume(int shift)
   {
-   long vol[];
-   ArraySetAsSeries(vol, true);
-   if(CopyTickVolume(_Symbol, PERIOD_M1, 0, shift + 2, vol) < shift + 2)
+   long vol_data[];
+   ArraySetAsSeries(vol_data, true);
+   if(CopyTickVolume(_Symbol, PERIOD_M1, 0, shift + 2, vol_data) < shift + 2)
       return 0;
-   return (double)vol[shift];
+   return (double)vol_data[shift];
   }
 
 //+------------------------------------------------------------------+
@@ -656,7 +759,8 @@ void OnTick()
    static datetime last_bar_time = 0;
    datetime current_bar_time = iTime(_Symbol, PERIOD_M1, 0);
 
-   UpdateDashboard();
+   if(InpShowDashboard && dashboard.NeedsUpdate())
+      UpdateDashboard();
 
    if(current_bar_time == last_bar_time)
       return;
@@ -688,15 +792,15 @@ void OnTick()
    double upper_tail = high1 - MathMax(open1, close1);
    double lower_tail = MathMin(open1, close1) - low1;
 
-   double body_ratio  = body_size / total_range;
+   double body_ratio  = body_size  / total_range;
    double upper_ratio = upper_tail / total_range;
    double lower_ratio = lower_tail / total_range;
 
-   bool size_ok   = total_range >= (buf_atr[1] * InpMinBarATR);
-   bool body_ok   = body_ratio <= InpMaxBodyRatio;
-   bool volume_ok = vol1 > (vol_avg * InpVolumeMulti);
+   bool size_ok   = (total_range >= buf_atr[1] * InpMinBarATR);
+   bool body_ok   = (body_ratio  <= InpMaxBodyRatio);
+   bool volume_ok = (vol1 > vol_avg * InpVolumeMulti);
 
-   int spread = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
+   int spread     = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
    bool spread_ok = (spread <= InpMaxSpread);
 
    bool is_bullish_pin = body_ok &&
@@ -721,14 +825,15 @@ void OnTick()
 //+------------------------------------------------------------------+
 void ExecuteBuy(double high1, double low1, double close1, double atr, double vol_ratio)
   {
-   double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
-   int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
+   double point  = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+   int    digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
 
-   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-   double sl  = NormalizeDouble(low1 - InpSLBuffer * point * 10, digits);
+   double ask  = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double sl   = NormalizeDouble(low1 - InpSLBuffer * point * 10, digits);
    double risk = ask - sl;
    if(risk <= 0)
       return;
+
    double tp = NormalizeDouble(ask + risk * InpRiskReward, digits);
 
    if(trade.Buy(InpLotSize, _Symbol, ask, sl, tp, "PinBar BUY"))
@@ -737,14 +842,14 @@ void ExecuteBuy(double high1, double low1, double close1, double atr, double vol
       DrawArrow(iTime(_Symbol, PERIOD_M1, 1), low1, true);
 
       SignalRecord sig;
-      sig.time = iTime(_Symbol, PERIOD_M1, 1);
-      sig.type = "شراء";
-      sig.entry = ask;
-      sig.sl = sl;
-      sig.tp = tp;
-      sig.atr = atr;
+      sig.time         = iTime(_Symbol, PERIOD_M1, 1);
+      sig.type         = "شراء";
+      sig.entry        = ask;
+      sig.sl           = sl;
+      sig.tp           = tp;
+      sig.atr          = atr;
       sig.volume_ratio = vol_ratio;
-      sig.active = true;
+      sig.active       = true;
       dashboard.AddSignal(sig);
 
       SendAlerts("شراء", ask, sl, tp);
@@ -761,14 +866,15 @@ void ExecuteBuy(double high1, double low1, double close1, double atr, double vol
 //+------------------------------------------------------------------+
 void ExecuteSell(double high1, double low1, double close1, double atr, double vol_ratio)
   {
-   double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
-   int digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
+   double point  = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+   int    digits = (int)SymbolInfoInteger(_Symbol, SYMBOL_DIGITS);
 
-   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-   double sl  = NormalizeDouble(high1 + InpSLBuffer * point * 10, digits);
+   double bid  = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double sl   = NormalizeDouble(high1 + InpSLBuffer * point * 10, digits);
    double risk = sl - bid;
    if(risk <= 0)
       return;
+
    double tp = NormalizeDouble(bid - risk * InpRiskReward, digits);
 
    if(trade.Sell(InpLotSize, _Symbol, bid, sl, tp, "PinBar SELL"))
@@ -777,14 +883,14 @@ void ExecuteSell(double high1, double low1, double close1, double atr, double vo
       DrawArrow(iTime(_Symbol, PERIOD_M1, 1), high1, false);
 
       SignalRecord sig;
-      sig.time = iTime(_Symbol, PERIOD_M1, 1);
-      sig.type = "بيع";
-      sig.entry = bid;
-      sig.sl = sl;
-      sig.tp = tp;
-      sig.atr = atr;
+      sig.time         = iTime(_Symbol, PERIOD_M1, 1);
+      sig.type         = "بيع";
+      sig.entry        = bid;
+      sig.sl           = sl;
+      sig.tp           = tp;
+      sig.atr          = atr;
       sig.volume_ratio = vol_ratio;
-      sig.active = true;
+      sig.active       = true;
       dashboard.AddSignal(sig);
 
       SendAlerts("بيع", bid, sl, tp);
@@ -802,10 +908,21 @@ void ExecuteSell(double high1, double low1, double close1, double atr, double vo
 void DrawArrow(datetime time, double price, bool is_buy)
   {
    string name = "PB_ARROW_" + TimeToString(time, TIME_DATE | TIME_MINUTES | TIME_SECONDS);
-   int arrow_code = is_buy ? 233 : 234;
-   color arrow_clr = is_buy ? clrLime : clrRed;
-   double offset = SymbolInfoDouble(_Symbol, SYMBOL_POINT) * 50;
 
+   int   arrow_code;
+   color arrow_clr;
+   if(is_buy)
+     {
+      arrow_code = 233;
+      arrow_clr  = clrLime;
+     }
+   else
+     {
+      arrow_code = 234;
+      arrow_clr  = clrRed;
+     }
+
+   double offset = SymbolInfoDouble(_Symbol, SYMBOL_POINT) * 50;
    if(is_buy)
       price -= offset;
    else
@@ -850,7 +967,7 @@ bool CanOpenTrade()
          PositionGetInteger(POSITION_MAGIC) == InpMagicNumber)
          count++;
      }
-   return count < InpMaxOpenTrades;
+   return (count < InpMaxOpenTrades);
   }
 
 //+------------------------------------------------------------------+
@@ -858,13 +975,14 @@ bool CanOpenTrade()
 //+------------------------------------------------------------------+
 void UpdateTradeStats()
   {
-   g_wins = 0;
-   g_losses = 0;
+   g_wins         = 0;
+   g_losses       = 0;
    g_total_profit = 0;
 
-   HistorySelect(0, TimeCurrent());
-   int total = HistoryDealsTotal();
+   if(!HistorySelect(0, TimeCurrent()))
+      return;
 
+   int total = HistoryDealsTotal();
    for(int i = total - 1; i >= 0; i--)
      {
       ulong ticket = HistoryDealGetTicket(i);
@@ -879,9 +997,9 @@ void UpdateTradeStats()
       if(entry_type != DEAL_ENTRY_OUT)
          continue;
 
-      double profit = HistoryDealGetDouble(ticket, DEAL_PROFIT) +
-                      HistoryDealGetDouble(ticket, DEAL_SWAP) +
-                      HistoryDealGetDouble(ticket, DEAL_COMMISSION);
+      double profit = HistoryDealGetDouble(ticket, DEAL_PROFIT)
+                    + HistoryDealGetDouble(ticket, DEAL_SWAP)
+                    + HistoryDealGetDouble(ticket, DEAL_COMMISSION);
       g_total_profit += profit;
 
       if(profit > 0)
@@ -908,12 +1026,12 @@ void UpdateDashboard()
    if(CopyBuffer(h_atr, 0, 1, 1, tmp_atr) >= 1)
       atr_val = tmp_atr[0];
 
-   double vol_avg = CalcVolumeAverage(InpVolumePeriod);
+   double vol_avg       = CalcVolumeAverage(InpVolumePeriod);
    double current_price = SymbolInfoDouble(_Symbol, SYMBOL_BID);
 
    string status;
    color  status_clr;
-   int open_trades = 0;
+   int    open_trades = 0;
    for(int i = PositionsTotal() - 1; i >= 0; i--)
      {
       if(PositionGetSymbol(i) == _Symbol &&
@@ -923,17 +1041,19 @@ void UpdateDashboard()
 
    if(open_trades > 0)
      {
-      status = "نشط - " + IntegerToString(open_trades) + " صفقات";
-      status_clr = C'34,197,94';
+      status     = "نشط - " + IntegerToString(open_trades) + " صفقات";
+      status_clr = DASH_ACCENT_GREEN;
      }
    else
      {
-      status = "يراقب السوق...";
-      status_clr = C'59,130,246';
+      status     = "يراقب السوق...";
+      status_clr = DASH_ACCENT_BLUE;
      }
 
-   int total_trades = g_wins + g_losses;
-   double win_rate = (total_trades > 0) ? (g_wins * 100.0 / total_trades) : 0;
+   int    total_trades = g_wins + g_losses;
+   double win_rate     = 0;
+   if(total_trades > 0)
+      win_rate = g_wins * 100.0 / total_trades;
 
    dashboard.UpdateStats(g_total_buy, g_total_sell, win_rate, g_total_profit);
    dashboard.Update(ema_val, atr_val, vol_avg, current_price, status, status_clr);
